@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gorila</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  img {
+    max-width: 100%;
+    max-height: 100vh;
+    object-fit: contain;
+  }
+  #tap-overlay {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #tap-overlay.hidden {
+    display: none;
+  }
+  .captcha-box {
+    background: #fff;
+    border: 1px solid #d3d3d3;
+    border-radius: 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: Roboto, Arial, sans-serif;
+    cursor: pointer;
+    user-select: none;
+    width: 300px;
+    box-sizing: border-box;
+  }
+  .checkbox-wrap {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+  .checkbox {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #c1c1c1;
+    border-radius: 2px;
+    background: #fff;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .checkbox svg {
+    width: 20px;
+    height: 20px;
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  .checkbox.checked svg {
+    opacity: 1;
+    transform: scale(1);
+    transition: all 0.25s cubic-bezier(.2,1.4,.4,1);
+  }
+  .spinner {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid #e0e0e0;
+    border-top-color: #4285F4;
+    opacity: 0;
+    box-sizing: border-box;
+  }
+  .spinner.active {
+    opacity: 1;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .captcha-text {
+    font-size: 15px;
+    color: #000;
+    flex: 1;
+  }
+  .captcha-status {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+  }
+  .captcha-logo {
+    text-align: center;
+    font-size: 10px;
+    color: #999;
+    line-height: 1.3;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<img src="gorilla.jpg" alt="Gorila">
+<audio id="audio" src="audio.mp3" loop></audio>
+
+<!-- Browser memblokir autoplay dengan suara sebelum ada interaksi user,
+     jadi overlay "verifikasi" ini dipakai buat mancing 1 klik pertama
+     supaya audio bisa langsung diputar full volume + gambar muncul. -->
+<div id="tap-overlay">
+  <div class="captcha-box" id="captcha-box">
+    <div class="checkbox-wrap">
+      <div class="checkbox" id="checkbox">
+        <svg viewBox="0 0 24 24" fill="#4285F4"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+      </div>
+      <div class="spinner" id="spinner"></div>
+    </div>
+    <div>
+      <div class="captcha-text" id="captcha-text">Saya bukan robot</div>
+      <div class="captcha-status" id="captcha-status"></div>
+    </div>
+    <div class="captcha-logo">reCAPTCHA<br>Privasi - Persyaratan</div>
+  </div>
+</div>
+
+<script>
+  const audio = document.getElementById('audio');
+  const overlay = document.getElementById('tap-overlay');
+  audio.volume = 1.0;
+
+  function playAudio() {
+    audio.volume = 1.0;
+    audio.loop = true;
+    audio.play().then(() => {
+      setTimeout(() => overlay.classList.add('hidden'), 500);
+    }).catch(() => {
+      // Kalau masih diblokir, overlay tetap tampil supaya user bisa tap lagi
+    });
+  }
+
+  // Coba autoplay langsung saat load (berhasil di beberapa browser/kondisi)
+  window.addEventListener('load', () => {
+    audio.play().then(() => {
+      overlay.classList.add('hidden');
+    }).catch(() => {
+      // gagal autoplay -> tunggu tap
+    });
+  });
+
+  let verifying = false;
+  document.getElementById('captcha-box').addEventListener('click', () => {
+    if (verifying) return;
+    verifying = true;
+
+    const checkbox = document.getElementById('checkbox');
+    const spinner = document.getElementById('spinner');
+    const status = document.getElementById('captcha-status');
+
+    spinner.classList.add('active');
+    status.textContent = 'Memverifikasi...';
+
+    // delay biar berasa lagi "diverifikasi" beneran
+    setTimeout(() => {
+      spinner.classList.remove('active');
+      checkbox.classList.add('checked');
+      status.textContent = 'Verifikasi berhasil';
+      playAudio();
+    }, 1400);
+  });
+
+  // Jaga-jaga kalau audio berhenti karena sebab lain, putar ulang otomatis
+  audio.addEventListener('ended', () => {
+    audio.currentTime = 0;
+    audio.play();
+  });
+</script>
+
+</body>
+</html>
+
